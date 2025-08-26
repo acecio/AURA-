@@ -266,6 +266,18 @@
             border-radius: 8px;
             background-color: var(--card-bg);
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .habit-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .habit-card:active {
+            transform: translateY(0);
         }
 
         .habit-card h3 {
@@ -302,6 +314,18 @@
             display: flex;
             justify-content: space-between;
             margin-top: 20px;
+        }
+
+        .drag-over {
+            background-color: rgba(106, 17, 203, 0.2);
+            border: 2px dashed var(--primary-color);
+        }
+
+        .quick-add-notice {
+            text-align: center;
+            margin-top: 10px;
+            font-style: italic;
+            color: #777;
         }
     </style>
 </head>
@@ -345,6 +369,7 @@
                     </div>
                     <button type="submit">Add Habit</button>
                 </form>
+                <p class="quick-add-notice">Quick add: Click on any habit below or drag it to specific time slots</p>
             </div>
         </div>
 
@@ -367,8 +392,8 @@
         </div>
 
         <div class="card manage-habits">
-            <h2>Manage Habits</h2>
-            <p>These are your predefined habits with their point values:</p>
+            <h2>Quick Add Habits</h2>
+            <p>Click on any habit to add it with the current time, or drag to a specific time slot:</p>
             <div class="habit-grid" id="habitGrid">
                 <!-- Habit cards will be inserted here -->
             </div>
@@ -520,6 +545,14 @@
                 const endTime = document.getElementById('habitEndTime').value;
                 
                 const points = parseInt(type);
+                addHabitWithTime(name, points, startTime, endTime);
+                
+                // Reset form
+                this.reset();
+            });
+            
+            // Function to add a habit with specific time
+            function addHabitWithTime(name, points, startTime, endTime) {
                 const now = new Date();
                 const timeString = startTime && endTime 
                     ? `${startTime} - ${endTime}` 
@@ -565,10 +598,7 @@
                 updateHabitList();
                 updateChart();
                 updateProjections();
-                
-                // Reset form
-                this.reset();
-            });
+            }
             
             // Function to update the aura score display
             function updateAuraScore() {
@@ -707,7 +737,7 @@
                 document.getElementById('monthlyProjection').textContent = monthlyProjection;
             }
             
-            // Render predefined habits
+            // Render predefined habits as draggable buttons
             function renderPredefinedHabits() {
                 const habitGrid = document.getElementById('habitGrid');
                 habitGrid.innerHTML = '';
@@ -715,15 +745,71 @@
                 predefinedHabits.forEach(habit => {
                     const habitCard = document.createElement('div');
                     habitCard.className = 'habit-card';
+                    habitCard.setAttribute('draggable', 'true');
+                    habitCard.dataset.name = habit.name;
+                    habitCard.dataset.points = habit.points;
                     habitCard.innerHTML = `
                         <h3>${habit.name}</h3>
-                        <p>Points: ${habit.points > 0 ? '+' : ''}${habit.points}</p>
                         <p>${habit.description}</p>
                         <p class="${habit.points > 0 ? 'positive' : 'negative'}">
                             ${habit.points > 0 ? '+' : ''}${habit.points} Aura
                         </p>
                     `;
+                    
+                    // Add click event to quickly add habit
+                    habitCard.addEventListener('click', function() {
+                        addHabitWithTime(habit.name, habit.points);
+                    });
+                    
+                    // Add drag events
+                    habitCard.addEventListener('dragstart', function(e) {
+                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                            name: habit.name,
+                            points: habit.points
+                        }));
+                        setTimeout(() => this.style.opacity = '0.5', 0);
+                    });
+                    
+                    habitCard.addEventListener('dragend', function() {
+                        this.style.opacity = '1';
+                    });
+                    
                     habitGrid.appendChild(habitCard);
+                });
+                
+                // Add drop target to time inputs
+                const timeInputs = document.querySelectorAll('input[type="time"]');
+                timeInputs.forEach(input => {
+                    input.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        this.classList.add('drag-over');
+                    });
+                    
+                    input.addEventListener('dragleave', function() {
+                        this.classList.remove('drag-over');
+                    });
+                    
+                    input.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        this.classList.remove('drag-over');
+                        
+                        try {
+                            const habitData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                            
+                            // If this is the start time input, set the value to current time
+                            if (this.id === 'habitStartTime') {
+                                const now = new Date();
+                                this.value = now.toTimeString().substr(0, 5);
+                                
+                                // Auto-fill the form with the dragged habit
+                                document.getElementById('habitName').value = habitData.name;
+                                document.getElementById('habitType').value = habitData.points > 0 ? 
+                                    `+${Math.abs(habitData.points)}` : `-${Math.abs(habitData.points)}`;
+                            }
+                        } catch (error) {
+                            console.error('Error processing dropped habit:', error);
+                        }
+                    });
                 });
             }
             
