@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura Points Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --text-color: #333;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --positive-color: #4caf50;
+            --negative-color: #f44336;
+            --tab-active-color: #6a11cb;
+            --tab-inactive-color: #ccc;
+        }
+
+        .dark-mode {
+            --primary-color: #8a2be2;
+            --secondary-color: #4a86e8;
+            --text-color: #f5f5f5;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --border-color: #333;
+            --tab-active-color: #bb86fc;
+            --tab-inactive-color: #555;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 2.5rem;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .theme-toggle, .reset-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--text-color);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .current-aura {
+            text-align: center;
+        }
+
+        .aura-score {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .positive {
+            color: var(--positive-color);
+        }
+
+        .negative {
+            color: var(--negative-color);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1rem;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary-color);
+            font-weight: bold;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-bottom: 30px;
+        }
+
+        .habits-container {
+            margin-top: 20px;
+        }
+
+        .habit-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input, select, button {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        button {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .habit-list {
+            list-style: none;
+        }
+
+        .habit-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .habit-info {
+            flex-grow: 1;
+        }
+
+        .habit-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .habit-time {
+            font-size: 0.9rem;
+            color: #777;
+        }
+
+        .habit-points {
+            font-weight: bold;
+            margin: 0 10px;
+        }
+
+        .delete-btn {
+            background: var(--negative-color);
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        .rules {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+        }
+
+        .rules h2 {
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .rules ul {
+            margin-left: 20px;
+        }
+
+        .rules li {
+            margin-bottom: 10px;
+        }
+
+        .time-inputs {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .projection {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: rgba(106, 17, 203, 0.1);
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .manage-habits {
+            margin-top: 30px;
+        }
+
+        .habit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .habit-card {
+            padding: 15px;
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .habit-card h3 {
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .habit-card p {
+            margin: 5px 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Aura Points Tracker</h1>
+            <div class="header-controls">
+                <button class="reset-btn" id="resetBtn">🔄</button>
+                <button class="theme-toggle" id="themeToggle">🌙</button>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <div class="card current-aura">
+                <h2>Current Aura Points</h2>
+                <div class="aura-score" id="currentAura">100</div>
+                <p>Today's Net Change: <span id="dailyChange">0</span></p>
+                <div class="projection">
+                    <p>Projected Weekly Aura: <span id="weeklyProjection">100</span></p>
+                    <p>Projected Monthly Aura: <span id="monthlyProjection">100</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Add New Habit</h2>
+                <form class="habit-form" id="habitForm">
+                    <input type="text" id="habitName" placeholder="Habit name" required>
+                    <select id="habitType" required>
+                        <option value="+1">Positive (+1)</option>
+                        <option value="+2">Very Positive (+2)</option>
+                        <option value="+3">Extremely Positive (+3)</option>
+                        <option value="-1">Negative (-1)</option>
+                        <option value="-2">Very Negative (-2)</option>
+                        <option value="-3">Extremely Negative (-3)</option>
+                    </select>
+                    <div class="time-inputs">
+                        <input type="time" id="habitStartTime">
+                        <span>to</span>
+                        <input type="time" id="habitEndTime">
+                    </div>
+                    <button type="submit">Add Habit</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" data-tab="daily">Daily</button>
+                <button class="tab" data-tab="weekly">Weekly</button>
+                <button class="tab" data-tab="monthly">Monthly</button>
+                <button class="tab" data-tab="yearly">Yearly</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="auraChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card habits-container">
+            <h2>Today's Habits</h2>
+            <ul class="habit-list" id="habitList"></ul>
+        </div>
+
+        <div class="card manage-habits">
+            <h2>Manage Habits</h2>
+            <p>These are your predefined habits with their point values:</p>
+            <div class="habit-grid" id="habitGrid">
+                <!-- Habit cards will be inserted here -->
+            </div>
+        </div>
+
+        <div class="rules">
+            <h2>Rules & Guidelines</h2>
+            <ul>
+                <li>Each positive habit adds to your aura points, while negative habits subtract from them</li>
+                <li>Habits can have different values based on their impact: +1/-1 for small habits, +2/-2 for moderate, +3/-3 for significant habits</li>
+                <li>Your daily graph shows fluctuations throughout the day based on when you record habits</li>
+                <li>Weekly, monthly, and yearly views show your overall progress and trends</li>
+                <li>Consistency with positive habits will lead to an upward trend in your aura points over time</li>
+                <li>You can add specific time periods for habits to see how your day is structured</li>
+                <li>Projections are based on your current day's performance extended over the week/month</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="modal" id="resetModal">
+        <div class="modal-content">
+            <h2>Reset All Data?</h2>
+            <p>This will delete all your habits and reset your aura points to 100. This action cannot be undone.</p>
+            <div class="modal-buttons">
+                <button id="confirmReset">Yes, Reset</button>
+                <button id="cancelReset">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize variables
+            let currentAura = 100;
+            let dailyChange = 0;
+            let habits = JSON.parse(localStorage.getItem('habits')) || [];
+            let currentTab = 'daily';
+            let auraHistory = JSON.parse(localStorage.getItem('auraHistory')) || {
+                daily: Array(24).fill(100),
+                weekly: Array(7).fill(100),
+                monthly: Array(30).fill(100),
+                yearly: Array(12).fill(100)
+            };
+            
+            // Predefined habits
+            const predefinedHabits = [
+                { name: "Morning Workout", points: 2, description: "Start your day with exercise" },
+                { name: "<50 QUESTIONS SOLVED", points: 2, description: "Solved less than 50 questions" },
+                { name: ">50 QUES", points: 3, description: "Solved more than 50 questions" },
+                { name: "STAYING UP LATE", points: -2, description: "Stayed up later than planned" },
+                { name: "REVISION", points: 1, description: "Reviewed previous materials" },
+                { name: "Lecture", points: 1, description: "Attended or watched a lecture" },
+                { name: "Healthy Meal", points: 1, description: "Ate a nutritious meal" },
+                { name: "NOF", points: 2, description: "No social media distraction" },
+                { name: "DISTRACTED", points: -2, description: "Got distracted from work" }
+            ];
+            
+            // Initialize chart
+            const ctx = document.getElementById('auraChart').getContext('2d');
+            let auraChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Aura Points',
+                        data: [],
+                        borderColor: '#6a11cb',
+                        backgroundColor: 'rgba(106, 17, 203, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                }
+            });
+            
+            // Update UI with stored data
+            updateAuraScore();
+            updateHabitList();
+            updateChart();
+            updateProjections();
+            renderPredefinedHabits();
+            
+            // Theme toggle functionality
+            document.getElementById('themeToggle').addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                this.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+                // Update chart colors for dark mode
+                updateChartColors();
+            });
+            
+            // Reset button functionality
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                document.getElementById('resetModal').style.display = 'flex';
+            });
+            
+            document.getElementById('cancelReset').addEventListener('click', function() {
+                document.getElementById('resetModal').style.display = 'none';
+            });
+            
+            document.getElementById('confirmReset').addEventListener('click', function() {
+                resetAllData();
+                document.getElementById('resetModal').style.display = 'none';
+            });
+            
+            // Tab switching functionality
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.getAttribute('data-tab');
+                    updateChart();
+                });
+            });
+            
+            // Add habit form submission
+            document.getElementById('habitForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('habitName').value;
+                const type = document.getElementById('habitType').value;
+                const startTime = document.getElementById('habitStartTime').value;
+                const endTime = document.getElementById('habitEndTime').value;
+                
+                const points = parseInt(type);
+                const now = new Date();
+                const timeString = startTime && endTime 
+                    ? `${startTime} - ${endTime}` 
+                    : now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Add the new habit
+                habits.push({
+                    id: Date.now(),
+                    name,
+                    points,
+                    time: timeString,
+                    timestamp: now
+                });
+                
+                // Update aura points
+                currentAura += points;
+                dailyChange += points;
+                
+                // Update history based on current time
+                const currentHour = now.getHours();
+                auraHistory.daily[currentHour] = currentAura;
+                
+                // Update weekly data (0 = Sunday, 6 = Saturday)
+                const dayOfWeek = now.getDay();
+                auraHistory.weekly[dayOfWeek] = currentAura;
+                
+                // Update monthly data (0-indexed day of month)
+                const dayOfMonth = now.getDate() - 1;
+                if (dayOfMonth < 30) {
+                    auraHistory.monthly[dayOfMonth] = currentAura;
+                }
+                
+                // Update yearly data (0-indexed month)
+                const month = now.getMonth();
+                auraHistory.yearly[month] = currentAura;
+                
+                // Save to localStorage
+                localStorage.setItem('habits', JSON.stringify(habits));
+                localStorage.setItem('auraHistory', JSON.stringify(auraHistory));
+                
+                // Update UI
+                updateAuraScore();
+                updateHabitList();
+                updateChart();
+                updateProjections();
+                
+                // Reset form
+                this.reset();
+            });
+            
+            // Function to update the aura score display
+            function updateAuraScore() {
+                document.getElementById('currentAura').textContent = currentAura;
+                const dailyChangeEl = document.getElementById('dailyChange');
+                dailyChangeEl.textContent = dailyChange >= 0 ? `+${dailyChange}` : dailyChange;
+                dailyChangeEl.className = dailyChange >= 0 ? 'positive' : 'negative';
+            }
+            
+            // Function to update the habit list
+            function updateHabitList() {
+                const habitList = document.getElementById('habitList');
+                habitList.innerHTML = '';
+                
+                // Filter today's habits
+                const today = new Date().toDateString();
+                const todaysHabits = habits.filter(habit => 
+                    new Date(habit.timestamp).toDateString() === today
+                );
+                
+                if (todaysHabits.length === 0) {
+                    habitList.innerHTML = '<li class="habit-item">No habits recorded today</li>';
+                    return;
+                }
+                
+                // Sort by timestamp (newest first)
+                todaysHabits.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Add habits to list
+                todaysHabits.forEach(habit => {
+                    const li = document.createElement('li');
+                    li.className = 'habit-item';
+                    li.innerHTML = `
+                        <div class="habit-info">
+                            <div class="habit-name">${habit.name}</div>
+                            <div class="habit-time">${habit.time}</div>
+                        </div>
+                        <div class="habit-points ${habit.points > 0 ? 'positive' : 'negative'}">
+                            ${habit.points > 0 ? '+' : ''}${habit.points}
+                        </div>
+                        <button class="delete-btn" data-id="${habit.id}">Delete</button>
+                    `;
+                    habitList.appendChild(li);
+                });
+                
+                // Add event listeners to delete buttons
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.getAttribute('data-id'));
+                        deleteHabit(id);
+                    });
+                });
+            }
+            
+            // Function to delete a habit
+            function deleteHabit(id) {
+                const habitIndex = habits.findIndex(habit => habit.id === id);
+                if (habitIndex !== -1) {
+                    const habit = habits[habitIndex];
+                    
+                    // Update aura points
+                    currentAura -= habit.points;
+                    dailyChange -= habit.points;
+                    
+                    // Remove habit from array
+                    habits.splice(habitIndex, 1);
+                    
+                    // Save to localStorage
+                    localStorage.setItem('habits', JSON.stringify(habits));
+                    
+                    // Update UI
+                    updateAuraScore();
+                    updateHabitList();
+                    updateChart();
+                    updateProjections();
+                }
+            }
+            
+            // Function to update the chart based on current tab
+            function updateChart() {
+                let labels, data;
+                
+                switch (currentTab) {
+                    case 'daily':
+                        labels = [
+                            '12 AM', '1 AM', '2 AM', '3 AM', '4 AM', '5 AM', 
+                            '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
+                            '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', 
+                            '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM'
+                        ];
+                        data = auraHistory.daily;
+                        break;
+                    case 'weekly':
+                        labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                        data = auraHistory.weekly;
+                        break;
+                    case 'monthly':
+                        labels = Array.from({length: 30}, (_, i) => i + 1);
+                        data = auraHistory.monthly;
+                        break;
+                    case 'yearly':
+                        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        data = auraHistory.yearly;
+                        break;
+                }
+                
+                auraChart.data.labels = labels;
+                auraChart.data.datasets[0].data = data;
+                
+                // Update colors based on theme
+                updateChartColors();
+                
+                auraChart.update();
+            }
+            
+            // Update chart colors based on theme
+            function updateChartColors() {
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                
+                auraChart.data.datasets[0].borderColor = isDarkMode ? '#bb86fc' : '#6a11cb';
+                auraChart.data.datasets[0].backgroundColor = isDarkMode ? 
+                    'rgba(187, 134, 252, 0.1)' : 'rgba(106, 17, 203, 0.1)';
+                
+                auraChart.options.scales.y.grid.color = isDarkMode ? 
+                    'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                
+                auraChart.update();
+            }
+            
+            // Update weekly and monthly projections
+            function updateProjections() {
+                const weeklyProjection = currentAura + (dailyChange * 6);
+                const monthlyProjection = currentAura + (dailyChange * 29);
+                
+                document.getElementById('weeklyProjection').textContent = weeklyProjection;
+                document.getElementById('monthlyProjection').textContent = monthlyProjection;
+            }
+            
+            // Render predefined habits
+            function renderPredefinedHabits() {
+                const habitGrid = document.getElementById('habitGrid');
+                habitGrid.innerHTML = '';
+                
+                predefinedHabits.forEach(habit => {
+                    const habitCard = document.createElement('div');
+                    habitCard.className = 'habit-card';
+                    habitCard.innerHTML = `
+                        <h3>${habit.name}</h3>
+                        <p>Points: ${habit.points > 0 ? '+' : ''}${habit.points}</p>
+                        <p>${habit.description}</p>
+                        <p class="${habit.points > 0 ? 'positive' : 'negative'}">
+                            ${habit.points > 0 ? '+' : ''}${habit.points} Aura
+                        </p>
+                    `;
+                    habitGrid.appendChild(habitCard);
+                });
+            }
+            
+            // Reset all data
+            function resetAllData() {
+                currentAura = 100;
+                dailyChange = 0;
+                habits = [];
+                auraHistory = {
+                    daily: Array(24).fill(100),
+                    weekly: Array(7).fill(100),
+                    monthly: Array(30).fill(100),
+                    yearly: Array(12).fill(100)
+                };
+                
+                // Save to localStorage
+                localStorage.setItem('habits', JSON.stringify(habits));
+                localStorage.setItem('auraHistory', JSON.stringify(auraHistory));
+                
+                // Update UI
+                updateAuraScore();
+                updateHabitList();
+                updateChart();
+                updateProjections();
+            }
+        });
+    </script>
+</body>
+</html>
